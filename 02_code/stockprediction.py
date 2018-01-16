@@ -1,9 +1,23 @@
 # Import
+import time
 import tensorflow as tf
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
+import ccxt
+
+binance = ccxt.binance({
+    'apiKey': 'bLt8i8ah7z5OIhPcjW9XNISudKLWcQ4PxdWSLfK57r1Z1iEz8h4I8kwFSMgwLJR3',
+    'secret': 'mtKjfWoSP88Y8isnYFHvpgm2TLvOXl0lOdOHiSfnvvvc3hfa4nlsBk9HQ5auD4f6'
+})
+i = 0
+while i < 2000:
+    headers = ['symbol', 'price', 'timestamp', 'amount', 'cost']
+
+    pd.DataFrame.to_csv('binance_ticks.csv')
+    dataFrame = pd.DataFrame()
+    time.sleep(1)
 
 # Import data
 data = pd.read_csv('01_data/data_stocks.csv')
