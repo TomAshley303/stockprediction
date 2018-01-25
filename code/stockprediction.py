@@ -20,7 +20,7 @@ while i < 2000:
     time.sleep(1)
 
 # Import data
-data = pd.read_csv('01_data/data_stocks.csv')
+data = pd.read_csv('data/data_stocks.csv')
 
 # Drop date variable
 data = data.drop(['DATE'], 1)

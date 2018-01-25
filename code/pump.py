@@ -82,43 +82,55 @@ def watch_action(symbol, exchange):
         time.sleep(1)
         tick = exchange.fetch_ticker(symbol)
         print("Time: %s , Symbol: %s, Last Ask: %.8f, Last Bid: %.8f, High: %.8f, Low: %.8f" % (
-        str(tick["datetime"]), symbol, tick['ask'], tick['bid'], tick['high'], tick['low']))
+            str(tick["datetime"]), symbol, tick['ask'], tick['bid'], tick['high'], tick['low']))
 
 
 def cancel_and_rebuy(exchange, order_id, symbol, quantity, buy_price):
-    exchange.cancel_order(order_id)
+    exchange.cancel_order(order_id, symbol  )
     while True:
         time.sleep(2)
         status = exchange.fetch_order_status(order_id)["status"]
         if status == "CANCELED":
             return exchange.create_limit_buy_order(symbol, quantity, buy_price)
 
-def simple_trade_btc(symbol, quantity, exchange, buy_price=None):
+def simple_trade_btc(symbol, quantity, exchange, buy_price=None, order_id=None):
     print("Simple Trade for Exchange: %s and Currency: %s \n" % (EXCHANGE, symbol))
     last_tick = exchange.fetch_ticker(symbol)
-    if buy_price is None:
-        buy_price = last_tick['bid'] - (last_tick['bid'] * 0.02)
+    # if buy_price is None:
+    buy_price = last_tick['bid']
     LAST_ORDER_PRICE = buy_price
-    buy_price = round(buy_price, 5)
+    buy_price = round(buy_price - (buy_price * 0.02), 5)
     buy_order = exchange.create_limit_buy_order(symbol, quantity, buy_price)
+    print("Create Buy Order for %s at: \n" % symbol)
+    print("Buy Price: %.5f \n" % buy_price * 0.01)
     while True:
         time.sleep(3)
-        last_tick = exchange.fetch_ticker(symbol)
         # print("Time: %s , Symbol: %s, Last Ask: %.8f, Last Bid: %.8f, High: %.8f, Low: %.8f" % (
         #     str(last_tick["datetime"]), symbol, last_tick['ask'], last_tick['bid'], last_tick['high'], last_tick['low']))
         buy_order_status = exchange.fetch_order_status(buy_order["id"])
-        if buy_order_status != "FILLED:":
-            if last_tick['bid'] < buy_price:
+        print("Exchange: %s and Currency: %s. Buy Order Status: %s \n" % (EXCHANGE, symbol, buy_order_status))
+        if buy_order_status != "closed":
+            last_tick = exchange.fetch_ticker(symbol)
+            if last_tick['bid'] > buy_price:
                 buy_price = last_tick['bid']
-                buy_order = cancel_and_rebuy(exchange, buy_order['id'], buy_price)
+                buy_order = cancel_and_rebuy(exchange, symbol, buy_order['id'], quantity, buy_price)
         else:
             break
+    # orders = exchange.fetch_closed_ozrders()
     sell_price = buy_price * MAXPROFIT
+
+    sell_price = round(sell_price, 5)
     sell_order = exchange.create_limit_sell_order(symbol, quantity, sell_price)
+    print("Create Sell Order for %s at: \n" % symbol)
+    print("Sell Price: %.5f \n Original Buy Price: %.5f \n Profit Made (BTC): %.5f \n" %
+          (sell_price, buy_price, sell_price - buy_price))
     while True:
         time.sleep(3)
-        sell_order_status = exchange.fetch_order_status(sell_order["id"])["status"]
-        if sell_order_status == "FILLED:":
+        sell_order_status = exchange.fetch_order_status(sell_order["id"])
+        print("Exchange: %s Currency: %s. Sell Order Status: %s \n" % (EXCHANGE, symbol, sell_order_status))
+        if sell_order_status == "closed:":
+            print("Sell Price: %.5f \n Original Buy Price: %.5f \n Profit Made (BTC): %.5f \n" %
+                  (sell_price, buy_price, sell_price - buy_price))
             break
     print("Order Complete \n")
 
@@ -139,9 +151,8 @@ def main():
 
     while True:
         start_time = time.time()
-        # watch_action(symbol, exchange)
+        simple_trade_btc(symbol, QUANTITY, exchange, option.price)
         end_time = time.time()
-        simple_trade_btc(symbol, option.quantity, exchange, option.price)
         if end_time - start_time < WAIT_TIME:
             time.sleep(WAIT_TIME - (end_time - start_time))
 
